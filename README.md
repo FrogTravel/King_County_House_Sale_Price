@@ -1,7 +1,8 @@
 # King_County_House_Sale_Price
 Claude: 
-Q: How typical data science project should be structured?
-A: 
+- Q: How typical data science project should be structured?
+- A: 
+```
 project/
 ├── data/
 │   ├── raw/          # Original, immutable data
@@ -20,3 +21,4 @@ project/
 ├── .env              # Secrets (never commit this!)
 ├── .gitignore
 └── README.md
+```

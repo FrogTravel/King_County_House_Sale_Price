@@ -201,7 +201,7 @@ Interpretable OLS model. Assumes linear relationships between log-transformed fe
 Gradient boosting with L1/L2 regularization. Sequentially corrects residuals; delivers strong out-of-the-box performance on structured tabular data.
 
 **4. Stacking Ensemble**
-Layer 1 (base models): Random Forest, XGBoost, Gradient Boosting — each trained with 5-fold cross-validation to prevent target leakage.
+Layer 1 (base models): Random Forest, XGBoost, Gradient Boosting, CatBoost — each trained with 5-fold cross-validation to prevent target leakage.
 Layer 2 (meta-model): Linear Regression learns the optimal combination of base model predictions.
 
 **5. CatBoost**
@@ -222,7 +222,7 @@ All models were evaluated on the same held-out 20% test set.
 | **Stacking Ensemble** | **0.9582** | **0.9038** | **$115,334** | **$65,270** |
 
 
-**Best model: CatBoost** — highest test R² (0.8975) and lowest RMSE ($119,007).
+**Best model: Stacking Ensemble** — highest test R² (0.9038) and lowest RMSE ($115,334).
 
 The Stacking Ensemble achieves the best MAE ($66,747), making it a strong alternative when average error magnitude is the primary concern. Random Forest shows the largest train/test gap (0.983 vs. 0.882), indicating the highest degree of overfitting among ensemble methods. Linear Regression underfits across the board, confirming that the underlying relationships are substantially non-linear.
 

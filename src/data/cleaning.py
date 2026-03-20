@@ -1,96 +1,77 @@
+"""
+Data loading and cleaning.
+
+Responsibilities:
+- Load the raw CSV from data/raw/
+- Remove confirmed input errors (e.g. bedrooms = 33)
+- Fix column data types
+- Persist the cleaned dataset to data/processed/
+
+This module does NOT apply any feature transformations.
+Transformations that must be fit on the training set only
+(log scaling, zipcode encoding, etc.) belong in src/features/engineering.py.
+"""
+
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
+
+from src.config import RAW_DATA_PATH, PROCESSED_DATA_PATH
 
 
-categorical_features = ["zipcode", "floors", "waterfront", "view", "condition", "grade"]
-numerical_features = ["bathrooms", "sqft_living", "sqft_lot", "sqft_above", "sqft_basement", "yr_built", "yr_renovated", "lat", "long", "sqft_living15", "sqft_lot15"]
+# ── Loading ───────────────────────────────────────────────────────────────────
 
-log_n_features = ["sqft_basement", "sqft_living", "sqft_lot", "sqft_above", "sqft_living15", "sqft_lot15"] # TODO should we log the price?
-
-
-def log_right_skewed_features(df, features):
-  preprocess_data = df.copy()
-
-  for feature in features:
-    preprocess_data[feature] = np.log1p(preprocess_data[feature]) # There are 0 in some features
-
-  return preprocess_data
+def load_raw_data() -> pd.DataFrame:
+    """Load the raw dataset from data/raw/."""
+    return pd.read_csv(RAW_DATA_PATH)
 
 
-def fix_dtypes(df):
-  df["date"] = pd.to_datetime(df["date"])
-  return df
+def load_clean_data() -> pd.DataFrame:
+    """Load the cleaned dataset from data/processed/."""
+    return pd.read_csv(PROCESSED_DATA_PATH)
 
 
-# The original encode_zipcode_to_ordinal function is retained here for reference or future use.
-# However, the user's request will be fulfilled by a new set of functions for X_train/y_train.
-# Creating additional feature to encode the zipcode
-# The idea is that zipcodes represent different areas.
-# Different areas have different cost_per_sqft
-# Then we can encode the zipcode as ordinal, where
-# the biggest values is the most expensive area
-# the smalles value is the cheapest area
-def encode_zipcode_to_ordinal(df):
-  result = df.copy()
-  result["cost_per_sqft"] = df["price"] / df["sqft_living"]
+# ── Cleaning steps ────────────────────────────────────────────────────────────
 
-  # Calculate the mean cost per sqft for each zipcode
-  zipcode_mean_cost = result.groupby("zipcode")["cost_per_sqft"].mean()
-
-  # Rank the zipcodes based on their mean cost per sqft
-  # Using 'dense' method so that ranks are consecutive integers
-  zipcode_rank_series = zipcode_mean_cost.rank(method='dense', ascending=True)
-
-  # Convert the Series to a DataFrame and reset index to make 'zipcode' a column for merging
-  zipcode_rank_df = zipcode_rank_series.reset_index(name='zipcode_ordinal_rank')
-
-  # Merge this new ranking feature back into the original DataFrame copy
-  result = result.merge(zipcode_rank_df[['zipcode', 'zipcode_ordinal_rank']], on="zipcode", how="left")
-
-  # Drop the intermediate 'cost_per_sqft' column
-  result = result.drop(columns=["cost_per_sqft"])
-
-  return result
+def fix_dtypes(df: pd.DataFrame) -> pd.DataFrame:
+    """Parse the date column to datetime."""
+    result = df.copy()
+    result["date"] = pd.to_datetime(result["date"])
+    return result
 
 
-# Function to create the zipcode ranking map from training data
-def create_zipcode_ranking_map(X_train_df, y_train_series):
-    train_combined = X_train_df.copy()
-    train_combined['price'] = y_train_series.values # Ensure alignment
-    train_combined['cost_per_sqft'] = train_combined['price'] / train_combined['sqft_living']
+def remove_outliers(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Remove confirmed data entry errors.
 
-    zipcode_mean_cost = train_combined.groupby('zipcode')['cost_per_sqft'].mean()
-    zipcode_rank_series = zipcode_mean_cost.rank(method='dense', ascending=True)
-    zipcode_rank_df = zipcode_rank_series.reset_index(name='zipcode_ordinal_rank')
-    return zipcode_rank_df
+    - bedrooms = 33: a single row with an impossibly high bedroom count.
+      The property has a normal sqft_living (~1,620 sq ft) — clear typo.
+    """
+    return df[df["bedrooms"] < 33].reset_index(drop=True)
 
 
-# Function to apply the zipcode ranking map to a DataFrame
-def apply_zipcode_ranking(df_to_transform, zipcode_ranking_map_df):
-    df_transformed = df_to_transform.copy()
-    df_transformed = df_transformed.merge(zipcode_ranking_map_df[['zipcode', 'zipcode_ordinal_rank']], on='zipcode', how='left')
-    # Handle zipcodes in test set not seen in training set if necessary (e.g., fill with median/mode or a special value)
-    # For simplicity, we'll assume all zipcodes in test are in train, or will be NaN if not.
-    # Optionally, df_transformed['zipcode_ordinal_rank'] = df_transformed['zipcode_ordinal_rank'].fillna(some_default_value)
-    df_transformed = df_transformed.drop(columns=['zipcode'])
-    return df_transformed
+# ── Persistence ───────────────────────────────────────────────────────────────
+
+def save_clean_data(df: pd.DataFrame) -> None:
+    """Save the cleaned DataFrame to data/processed/."""
+    PROCESSED_DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(PROCESSED_DATA_PATH, index=False)
+    print(f"  Saved → {PROCESSED_DATA_PATH}  ({len(df):,} rows)")
 
 
-def standardize_numerical_features(df, features):
-  scaler = StandardScaler()
-  df[features] = scaler.fit_transform(df[features])
-  return df
+# ── Pipeline ──────────────────────────────────────────────────────────────────
 
+def run_cleaning_pipeline() -> pd.DataFrame:
+    """
+    End-to-end cleaning pipeline:
+        load → fix dtypes → remove outliers → save to processed/
 
-def preprocess_features(df, ranking_map):
-  result = log_right_skewed_features(df, log_n_features) # Linear Model perform better without this!
-  result = fix_dtypes(result)
-  result = apply_zipcode_ranking(result, ranking_map) # Has big impact on results
-  result = standardize_numerical_features(result, numerical_features) # Has almost no impact on results
-  result = result.drop(["date"], axis = 1)
+    Returns the cleaned DataFrame.
+    """
+    data = load_raw_data()
+    print(f"  Loaded raw data: {data.shape[0]:,} rows × {data.shape[1]} columns")
 
-  return result
+    data = fix_dtypes(data)
+    data = remove_outliers(data)
+    print(f"  After cleaning:  {data.shape[0]:,} rows × {data.shape[1]} columns")
+
+    save_clean_data(data)
+    return data

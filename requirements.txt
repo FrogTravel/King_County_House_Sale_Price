@@ -1,0 +1,22 @@
+# Core data stack
+numpy>=2.0
+pandas>=2.0
+scipy>=1.10
+
+# Machine learning
+scikit-learn>=1.4
+xgboost>=2.0
+catboost>=1.2
+statsmodels>=0.14
+
+# Visualisation
+matplotlib>=3.8
+seaborn>=0.13
+plotly>=5.0
+
+# Notebook support
+ipykernel
+jupyter_client
+
+# Utilities
+tqdm

@@ -19,18 +19,42 @@ The best model — CatBoost — achieves a test R² of **0.8975** and a test RMS
 ```
 king_county_price_prediction/
 ├── data/
-│   └── raw/                        # Original dataset (king_ country_ houses_aa.csv)
+│   ├── raw/                        # Original, immutable dataset
+│   └── processed/                  # Cleaned data output (git-ignored, reproducible)
 ├── notebooks/
-│   └── eda.ipynb                   # Exploratory Data Analysis notebook
+│   ├── eda.ipynb                   # Exploratory Data Analysis
+│   └── modelling.ipynb             # Model training and evaluation
 ├── src/
-│   └── data/
-│       ├── modelling.ipynb         # Model training and evaluation
-│       └── cleaning.py             # Preprocessing utilities
+│   ├── __init__.py
+│   ├── config.py                   # All constants: paths, feature lists, hyperparameters
+│   ├── utils.py                    # Shared helper functions
+│   ├── data/
+│   │   ├── __init__.py
+│   │   └── cleaning.py             # Load raw data, remove outliers, save to processed/
+│   ├── features/
+│   │   ├── __init__.py
+│   │   └── engineering.py          # Log transforms, zipcode encoding, renovation features
+│   └── models/
+│       ├── __init__.py
+│       ├── train.py                # Model definitions (get_models) and training
+│       └── evaluate.py             # Metrics (evaluate_model, compare_models)
+├── models/                         # Saved model artefacts (git-ignored)
 ├── reports/
-│   ├── eda_report.md               # Structured EDA findings
-│   └── REPORT_EDA.md               # Raw EDA notes
+│   └── eda_report.md               # Structured EDA findings
+├── main.py                         # End-to-end pipeline entry point
+├── requirements.txt
+├── .gitignore
 └── README.md
 ```
+
+### Running the pipeline
+
+```bash
+# From the project root
+python main.py
+```
+
+This runs all four stages in sequence: data cleaning → train/test split → feature engineering → model training and evaluation. Results are printed to stdout.
 
 ---
 
@@ -194,8 +218,9 @@ All models were evaluated on the same held-out 20% test set.
 | Linear Regression | 0.729 | 0.735 | $191,484 | $112,554 |
 | Random Forest | 0.983 | 0.882 | $127,574 | $69,339 |
 | XGBoost | 0.978 | 0.886 | $125,562 | $68,042 |
-| Stacking Ensemble | 0.961 | 0.896 | $119,958 | $66,747 |
-| **CatBoost** | **0.951** | **0.898** | **$119,007** | $67,710 |
+| CatBoost | 0.951 | 0.898 | $119,007 | $67,710 |
+| **Stacking Ensemble** | **0.9582** | **0.9038** | **$115,334** | **$65,270** |
+
 
 **Best model: CatBoost** — highest test R² (0.8975) and lowest RMSE ($119,007).
 

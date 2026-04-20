@@ -1,7 +1,7 @@
 # King County House Sale Price Prediction
 
 **Course:** Data Science & Machine Learning
-**Author:** Ekaterina Levchenko
+**Author:** Ekaterina Levchenko, Fernando https://github.com/fergonn
 **Date:** March 2026
 
 ---
